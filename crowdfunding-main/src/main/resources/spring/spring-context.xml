@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context" xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+        https://www.springframework.org/schema/beans/spring-beans.xsd
+         http://www.springframework.org/schema/context
+         https://www.springframework.org/schema/context/spring-context.xsd http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd http://www.springframework.org/schema/aop https://www.springframework.org/schema/aop/spring-aop.xsd">
+    <!--上下文的组件扫描-->
+    <context:component-scan base-package="com.uplooking.crowdfunding.*">
+        <context:exclude-filter type="annotation" expression="org.springframework.stereotype.Controller"></context:exclude-filter>
+    </context:component-scan>
+    <!--配置外部的数据源文件-->
+    <!--<context:property-placeholder location="classpath:config/db.properties"/>-->
+    <bean id="propertyPlaceholderConfigurer" class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+        <property name="locations" value="classpath:config/db.properties" />
+    </bean>
+
+    <!--数据源-->
+    <bean id="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+        <property name="driverClassName" value="${jdbc.driver}"></property>
+        <property name="url" value="${jdbc.url}"></property>
+        <property name="password" value="${jdbc.password}"></property>
+        <property name="username" value="${jdbc.username}"></property>
+    </bean>
+
+    <!--配置sqlSessionFactory-->
+    <bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <!--mybatis的核心配置文件-->
+        <property name="configLocation" value="classpath:mybatis/mybatis-config.xml"></property>
+        <!--数据源-->
+        <property name="dataSource" ref="dataSource"></property>
+        <!--映射文件扫描-->
+        <property name="mapperLocations" value="classpath:mybatis/mapper/*Mapper.xml"></property>
+        <!--<property name="typeAliases">-->
+        <!--<list>-->
+        <!--<value type="com.shangguan.atcrowdfunding.beans.Users">Users</value>-->
+        <!--</list>-->
+        <!--</property>-->
+        <property name="typeAliasesPackage" value="com.uplooking.crowdfunding.bean"></property>
+    </bean>
+
+    <!--配置我们的mybatis映射文件扫描-->
+    <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <!--扫描业务接口-->
+        <property name="basePackage" value="com.uplooking.crowdfunding.*.mapper"></property>
+        <!--使用的是字符串-->
+        <property name="sqlSessionFactoryBeanName" value="sqlSessionFactory"></property>
+    </bean>
+
+    <!--事务处理-->
+    <!--<tx:annotation-driven/>-->
+    <bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <property name="dataSource" ref="dataSource"></property>
+    </bean>
+    <!--事务切面-->
+    <tx:advice  id="transactionAdvice" transaction-manager="transactionManager">
+        <tx:attributes>
+            <tx:method name="find*" read-only="true" />
+            <tx:method name="get*" read-only="true"/>
+            <tx:method name="select*" read-only="true"/>
+            <tx:method name="add" read-only="false" rollback-for="java.lang.Exception" propagation="REQUIRED"></tx:method>
+            <tx:method name="delete" read-only="false" rollback-for="java.lang.Exception" propagation="REQUIRED"></tx:method>
+            <tx:method name="update" read-only="false" rollback-for="java.lang.Exception" propagation="REQUIRED"></tx:method>
+            <tx:method name="insert" read-only="false" rollback-for="java.lang.Exception" propagation="REQUIRED"></tx:method>
+            <tx:method name="put" read-only="false" rollback-for="java.lang.Exception" propagation="REQUIRED"></tx:method>
+        </tx:attributes>
+    </tx:advice>
+    <!--连接点-->
+    <aop:config >
+        <!--切入点表达式-->
+        <aop:pointcut id="myPointCut" expression="execution(* *.service.impl.*.*(..))"/>
+        <aop:advisor advice-ref="transactionAdvice" pointcut-ref="myPointCut"></aop:advisor>
+    </aop:config>
+</beans>
